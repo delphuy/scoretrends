@@ -1,0 +1,16 @@
+{
+    "grades": ["初一", "初二", "初三"],
+    "examTypes": ["月考", "期中", "期末","摸底", "分班","其他"],
+    "subjects": [
+        { "key": "chinese", "name": "语文" },
+        { "key": "math", "name": "数学" },
+        { "key": "english", "name": "英语" },
+        { "key": "physics", "name": "物理" },
+        { "key": "chemistry", "name": "化学" },
+        { "key": "history", "name": "历史" },
+        { "key": "politics", "name": "政治" },
+        { "key": "geography", "name": "地理" },
+        { "key": "biology", "name": "生物" },
+        { "key": "sports", "name": "体育" }
+    ]
+}

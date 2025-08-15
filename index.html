@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考试成绩管理系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --secondary-color: #4CAF50;
+            --danger-color: #f44336;
+            --background-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --hover-color: #f0f8ff;
+            --selected-color: #e3f2fd;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* Banner样式 */
+        .banner {
+            background-color: var(--primary-color);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .banner-logo {
+            height: 40px;
+            margin-right: 15px;
+        }
+
+        .banner-title {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px 20px;
+            gap: 20px;
+            min-height: calc(100vh - 90px);
+        }
+
+        /* 左侧表格区域 */
+        .table-section {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* 防止flex子项溢出 */
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table-header h2 {
+            color: var(--primary-color);
+            font-size: 24px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1976D2;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #388E3C;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: var(--hover-color);
+            font-weight: 600;
+            color: var(--primary-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tbody tr {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: var(--hover-color);
+        }
+
+        tbody tr.selected {
+            background-color: var(--selected-color);
+            box-shadow: inset 3px 0 0 var(--primary-color);
+        }
+
+        /* 右侧图表区域 */
+        .chart-section {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* 防止flex子项溢出 */
+        }
+
+        .chart-header {
+            margin-bottom: 20px;
+        }
+
+        .chart-header h2 {
+            color: var(--primary-color);
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 400px;
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            color: var(--primary-color);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-btn:hover {
+            color: var(--danger-color);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .chart-controls {
+                flex-direction: column;
+            }
+            
+            .control-group {
+                min-width: 100%;
+            }
+            
+            .banner {
+                padding: 10px 15px;
+            }
+            
+            .banner-logo {
+                height: 30px;
+            }
+            
+            .banner-title {
+                font-size: 18px;
+            }
+        }
+
+        /* 图标 */
+        .icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* 加载提示 */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            z-index: 2000;
+        }
+
+        /* 错误提示 */
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px;
+            border-left: 4px solid #c62828;
+        }
+
+        .error-message h4 {
+            margin-bottom: 10px;
+            color: #c62828;
+        }
+
+        .error-message ul {
+            margin-left: 20px;
+        }
+
+        .error-message li {
+            margin-bottom: 5px;
+        }
+
+        /* 空数据提示 */
+        .empty-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-data h3 {
+            margin-bottom: 10px;
+            color: #999;
+        }
+
+        /* 文件创建提示 */
+        .file-template {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .file-template h4 {
+            margin-bottom: 10px;
+            font-family: 'Microsoft YaHei', sans-serif;
+            color: #333;
+        }
+
+        /* 保存提示 */
+        .save-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 4px;
+            box-shadow: var(--shadow);
+            z-index: 1500;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .save-notification.error {
+            background-color: var(--danger-color);
+        }
+
+        /* 下载按钮 */
+        .download-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 500;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background-color: #1976D2;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">正在加载配置...</div>
+    
+    <!-- Banner区域 -->
+    <div class="banner">
+        <img src="logo.png" alt="Logo" class="banner-logo" onerror="this.style.display='none'">
+        <div class="banner-title">考试成绩管理系统</div>
+    </div>
+    
+    <div class="container" style="display: none;" id="mainContainer">
+        <!-- 左侧表格区域 -->
+        <section class="table-section">
+            <div class="table-header">
+                <h2>考试成绩记录</h2>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="addBtn">
+                        <span class="icon">➕</span> 新增
+                    </button>
+                    <button class="btn btn-secondary" id="editBtn" disabled>
+                        <span class="icon">✏️</span> 修改
+                    </button>
+                    <button class="btn btn-danger" id="deleteBtn" disabled>
+                        <span class="icon">🗑️</span> 删除
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="scoresTable">
+                    <thead>
+                        <tr id="tableHeader">
+                            <!-- 表头将通过JavaScript动态生成 -->
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- 数据将通过JavaScript动态填充 -->
+                    </tbody>
+                </table>
+                <div class="empty-data" id="emptyDataMessage" style="display: none;">
+                    <h3>暂无数据</h3>
+                    <p>点击"新增"按钮添加第一条考试记录</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右侧图表区域 -->
+        <section class="chart-section">
+            <div class="chart-header">
+                <h2>成绩趋势分析</h2>
+                
+                <div class="chart-controls">
+                    <div class="control-group">
+                        <label for="subjectFilter">科目筛选</label>
+                        <select id="subjectFilter">
+                            <!-- 选项将通过JavaScript动态生成 -->
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="gradeFilter">年级筛选</label>
+                        <select id="gradeFilter">
+                            <!-- 选项将通过JavaScript动态生成 -->
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="examTypeFilter">考试类型筛选</label>
+                        <select id="examTypeFilter">
+                            <!-- 选项将通过JavaScript动态生成 -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="scoresChart"></canvas>
+                <div class="empty-data" id="emptyChartMessage" style="display: none;">
+                    <h3>暂无数据</h3>
+                    <p>请先添加考试记录以查看趋势分析</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 表单模态框 -->
+    <div class="modal" id="formModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">新增考试成绩</h3>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="scoreForm">
+                    <div class="form-grid" id="formFields">
+                        <!-- 表单字段将通过JavaScript动态生成 -->
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn" id="cancelBtn">取消</button>
+                        <button type="submit" class="btn btn-primary" id="saveBtn">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 错误提示模态框 -->
+    <div class="modal" id="errorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>系统初始化失败</h3>
+                <button class="close-btn" id="closeErrorModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="error-message" id="errorMessage"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" id="closeErrorBtn">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下载按钮 -->
+    <button class="download-btn" id="downloadBtn" style="display: none;">
+        <span class="icon">💾</span> 下载数据文件
+    </button>
+
+    <script>
+        // 数据存储和管理
+        class DataManager {
+            constructor() {
+                this.config = null;
+                this.data = [];
+                this.selectedRow = null;
+                this.selectedRowIndex = null;
+                this.chart = null;
+                this.isSaving = false;
+                
+                // 初始化
+                this.init();
+            }
+            
+            async init() {
+                try {
+                    // 加载配置文件
+                    await this.loadConfig();
+                    
+                    // 加载数据文件
+                    await this.loadData();
+                    
+                    // 渲染界面
+                    this.renderTableHeader();
+                    this.renderFormFields();
+                    this.renderFilters();
+                    this.renderTable();
+                    this.renderChart();
+                    
+                    // 绑定事件
+                    this.bindEvents();
+                    
+                    // 显示主界面
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('mainContainer').style.display = 'flex';
+                    
+                    // 显示下载按钮
+                    document.getElementById('downloadBtn').style.display = 'block';
+                } catch (error) {
+                    console.error('初始化失败:', error);
+                    this.showError(error.message);
+                }
+            }
+            
+            async loadConfig() {
+                try {
+                    const response = await fetch('config.json');
+                    
+                    // 检查响应状态
+                    if (response.status === 404) {
+                        throw new Error('配置文件 config.json 不存在');
+                    }
+                    
+                    if (!response.ok) {
+                        throw new Error(`配置文件加载失败: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const text = await response.text();
+                    
+                    // 检查是否是HTML错误页面
+                    if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<!DOCTYPE')) {
+                        throw new Error('配置文件 config.json 不存在或服务器返回了错误页面');
+                    }
+                    
+                    // 尝试解析JSON
+                    try {
+                        this.config = JSON.parse(text);
+                    } catch (parseError) {
+                        throw new Error('配置文件 config.json 格式错误，不是有效的JSON格式');
+                    }
+                    
+                    // 验证配置文件格式
+                    if (!this.config.grades || !Array.isArray(this.config.grades)) {
+                        throw new Error('配置文件中缺少或格式错误的 grades 字段');
+                    }
+                    
+                    if (!this.config.examTypes || !Array.isArray(this.config.examTypes)) {
+                        throw new Error('配置文件中缺少或格式错误的 examTypes 字段');
+                    }
+                    
+                    if (!this.config.subjects || !Array.isArray(this.config.subjects)) {
+                        throw new Error('配置文件中缺少或格式错误的 subjects 字段');
+                    }
+                    
+                    // 验证subjects格式
+                    for (let subject of this.config.subjects) {
+                        if (!subject.key || !subject.name) {
+                            throw new Error('配置文件中的 subjects 格式错误，每个科目必须包含 key 和 name 字段');
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('配置文件加载失败:', error);
+                    throw new Error(`配置文件错误: ${error.message}`);
+                }
+            }
+            
+            async loadData() {
+                try {
+                    const response = await fetch('data.json');
+                    
+                    // 如果文件不存在，使用空数组
+                    if (response.status === 404) {
+                        console.log('data.json 不存在，使用空数据');
+                        this.data = [];
+                        return;
+                    }
+                    
+                    if (!response.ok) {
+                        console.log(`data.json 加载失败: ${response.status} ${response.statusText}，使用空数据`);
+                        this.data = [];
+                        return;
+                    }
+                    
+                    const text = await response.text();
+                    
+                    // 检查是否是HTML错误页面
+                    if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<!DOCTYPE')) {
+                        console.log('data.json 返回了HTML错误页面，使用空数据');
+                        this.data = [];
+                        return;
+                    }
+                    
+                    // 如果文件为空，使用空数组
+                    if (!text.trim()) {
+                        console.log('data.json 为空，使用空数据');
+                        this.data = [];
+                        return;
+                    }
+                    
+                    // 尝试解析JSON
+                    try {
+                        const data = JSON.parse(text);
+                        
+                        // 验证数据格式
+                        if (!Array.isArray(data)) {
+                            throw new Error('data.json 格式错误，应该是数组格式');
+                        }
+                        
+                        this.data = data;
+                    } catch (parseError) {
+                        console.log('data.json 格式错误，使用空数据');
+                        this.data = [];
+                    }
+                    
+                } catch (error) {
+                    console.error('数据文件加载失败:', error);
+                    this.data = [];
+                }
+            }
+            
+            renderTableHeader() {
+                const thead = document.getElementById('tableHeader');
+                thead.innerHTML = '';
+                
+                // 添加固定列
+                const fixedColumns = [
+                    { key: 'grade', name: '年级' },
+                    { key: 'examType', name: '考试类型' },
+                    { key: 'date', name: '日期' }
+                ];
+                
+                fixedColumns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col.name;
+                    thead.appendChild(th);
+                });
+                
+                // 添加科目列
+                this.config.subjects.forEach(subject => {
+                    const th = document.createElement('th');
+                    th.textContent = subject.name;
+                    thead.appendChild(th);
+                });
+                
+                // 添加备注列
+                const noteTh = document.createElement('th');
+                noteTh.textContent = '备注';
+                thead.appendChild(noteTh);
+            }
+            
+            renderFormFields() {
+                const formFields = document.getElementById('formFields');
+                formFields.innerHTML = '';
+                
+                // 年级选择
+                const gradeGroup = this.createFormGroup('grade', '年级', 'select', this.config.grades, true);
+                formFields.appendChild(gradeGroup);
+                
+                // 考试类型选择
+                const examTypeGroup = this.createFormGroup('examType', '考试类型', 'select', this.config.examTypes, true);
+                formFields.appendChild(examTypeGroup);
+                
+                // 日期输入
+                const dateGroup = this.createFormGroup('date', '日期', 'date');
+                formFields.appendChild(dateGroup);
+                
+                // 科目分数输入
+                this.config.subjects.forEach(subject => {
+                    const group = this.createFormGroup(subject.key, subject.name, 'number', null, false, true);
+                    formFields.appendChild(group);
+                });
+                
+                // 备注输入
+                const noteGroup = this.createFormGroup('note', '备注', 'text');
+                noteGroup.style.gridColumn = '1 / -1';
+                formFields.appendChild(noteGroup);
+            }
+            
+            createFormGroup(id, label, type, options = null, selectFirst = false, setDefaultZero = false) {
+                const group = document.createElement('div');
+                group.className = 'form-group';
+                
+                const labelEl = document.createElement('label');
+                labelEl.textContent = label;
+                labelEl.setAttribute('for', id);
+                group.appendChild(labelEl);
+                
+                let input;
+                if (type === 'select' && options) {
+                    input = document.createElement('select');
+                    input.id = id;
+                    input.required = true;
+                    
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = '请选择';
+                    input.appendChild(defaultOption);
+                    
+                    options.forEach((option, index) => {
+                        const optionEl = document.createElement('option');
+                        optionEl.value = option;
+                        optionEl.textContent = option;
+                        
+                        // 如果是第一个选项且需要默认选择，则设置为选中
+                        if (selectFirst && index === 0) {
+                            optionEl.selected = true;
+                        }
+                        
+                        input.appendChild(optionEl);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = type;
+                    input.id = id;
+                    
+                    if (type === 'number') {
+                        input.min = 0;
+                        input.max = 100;
+                        input.required = true;
+                        
+                        // 如果需要默认值为0，则设置
+                        if (setDefaultZero) {
+                            input.value = 0;
+                        }
+                    } else if (type === 'date') {
+                        input.required = true;
+                    }
+                }
+                
+                group.appendChild(input);
+                return group;
+            }
+            
+            renderFilters() {
+                // 科目筛选 - 默认选择"全部科目"
+                const subjectFilter = document.getElementById('subjectFilter');
+                subjectFilter.innerHTML = '';
+                
+                const allSubjectOption = document.createElement('option');
+                allSubjectOption.value = 'all';
+                allSubjectOption.textContent = '全部科目';
+                allSubjectOption.selected = true;
+                subjectFilter.appendChild(allSubjectOption);
+                
+                this.config.subjects.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject.key;
+                    option.textContent = subject.name;
+                    subjectFilter.appendChild(option);
+                });
+                
+                // 年级筛选 - 默认选择"全部年级"
+                const gradeFilter = document.getElementById('gradeFilter');
+                gradeFilter.innerHTML = '';
+                
+                const allGradeOption = document.createElement('option');
+                allGradeOption.value = 'all';
+                allGradeOption.textContent = '全部年级';
+                allGradeOption.selected = true;
+                gradeFilter.appendChild(allGradeOption);
+                
+                this.config.grades.forEach(grade => {
+                    const option = document.createElement('option');
+                    option.value = grade;
+                    option.textContent = grade;
+                    gradeFilter.appendChild(option);
+                });
+                
+                // 考试类型筛选 - 默认选择"全部类型"
+                const examTypeFilter = document.getElementById('examTypeFilter');
+                examTypeFilter.innerHTML = '';
+                
+                const allExamTypeOption = document.createElement('option');
+                allExamTypeOption.value = 'all';
+                allExamTypeOption.textContent = '全部类型';
+                allExamTypeOption.selected = true;
+                examTypeFilter.appendChild(allExamTypeOption);
+                
+                this.config.examTypes.forEach(examType => {
+                    const option = document.createElement('option');
+                    option.value = examType;
+                    option.textContent = examType;
+                    examTypeFilter.appendChild(option);
+                });
+            }
+            
+            bindEvents() {
+                // 表格行选择
+                document.getElementById('tableBody').addEventListener('click', (e) => {
+                    const row = e.target.closest('tr');
+                    if (row) {
+                        this.selectRow(row);
+                    }
+                });
+                
+                // 按钮事件
+                document.getElementById('addBtn').addEventListener('click', () => this.openForm());
+                document.getElementById('editBtn').addEventListener('click', () => this.openForm(this.selectedRowIndex));
+                document.getElementById('deleteBtn').addEventListener('click', () => this.deleteRecord());
+                
+                // 模态框事件
+                document.getElementById('closeModal').addEventListener('click', () => this.closeForm());
+                document.getElementById('cancelBtn').addEventListener('click', () => this.closeForm());
+                document.getElementById('scoreForm').addEventListener('submit', (e) => this.saveForm(e));
+                
+                // 错误模态框事件
+                document.getElementById('closeErrorModal').addEventListener('click', () => this.closeError());
+                document.getElementById('closeErrorBtn').addEventListener('click', () => this.closeError());
+                
+                // 筛选事件
+                document.getElementById('subjectFilter').addEventListener('change', () => this.renderChart());
+                document.getElementById('gradeFilter').addEventListener('change', () => this.renderChart());
+                document.getElementById('examTypeFilter').addEventListener('change', () => this.renderChart());
+                
+                // 下载按钮事件
+                document.getElementById('downloadBtn').addEventListener('click', () => this.downloadData());
+            }
+            
+            selectRow(row) {
+                // 移除之前的选中状态
+                document.querySelectorAll('#tableBody tr').forEach(tr => tr.classList.remove('selected'));
+                
+                // 添加选中状态
+                row.classList.add('selected');
+                this.selectedRow = row;
+                this.selectedRowIndex = parseInt(row.dataset.index);
+                
+                // 启用按钮
+                document.getElementById('editBtn').disabled = false;
+                document.getElementById('deleteBtn').disabled = false;
+            }
+            
+            openForm(rowIndex = null) {
+                const modal = document.getElementById('formModal');
+                const form = document.getElementById('scoreForm');
+                const title = document.getElementById('modalTitle');
+                
+                // 重置表单
+                form.reset();
+                
+                if (rowIndex !== null) {
+                    // 编辑模式
+                    title.textContent = '修改考试成绩';
+                    form.dataset.mode = 'edit';
+                    form.dataset.index = rowIndex;
+                    
+                    // 获取要编辑的数据
+                    const record = this.data[rowIndex];
+                    
+                    // 填充表单数据
+                    document.getElementById('grade').value = record.grade || '';
+                    document.getElementById('examType').value = record.examType || '';
+                    document.getElementById('date').value = record.date || '';
+                    document.getElementById('note').value = record.note || '';
+                    
+                    // 填充科目分数
+                    this.config.subjects.forEach(subject => {
+                        const value = record[subject.key];
+                        if (value !== undefined) {
+                            document.getElementById(subject.key).value = value;
+                        } else {
+                            // 如果没有值，设置为0
+                            document.getElementById(subject.key).value = 0;
+                        }
+                    });
+                } else {
+                    // 新增模式
+                    title.textContent = '新增考试成绩';
+                    form.dataset.mode = 'add';
+                    delete form.dataset.index;
+                    
+                    // 设置默认值
+                    // 年级默认选择第一个
+                    if (this.config.grades.length > 0) {
+                        document.getElementById('grade').value = this.config.grades[0];
+                    }
+                    
+                    // 考试类型默认选择第一个
+                    if (this.config.examTypes.length > 0) {
+                        document.getElementById('examType').value = this.config.examTypes[0];
+                    }
+                    
+                    // 所有科目默认为0
+                    this.config.subjects.forEach(subject => {
+                        document.getElementById(subject.key).value = 0;
+                    });
+                }
+                
+                // 显示模态框
+                modal.style.display = 'flex';
+            }
+            
+            closeForm() {
+                document.getElementById('formModal').style.display = 'none';
+            }
+            
+            async saveForm(e) {
+                e.preventDefault();
+                
+                // 防止重复提交
+                if (this.isSaving) {
+                    return;
+                }
+                
+                this.isSaving = true;
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.disabled = true;
+                saveBtn.textContent = '保存中...';
+                
+                try {
+                    const form = e.target;
+                    const mode = form.dataset.mode;
+                    
+                    // 收集表单数据
+                    const record = {
+                        grade: document.getElementById('grade').value,
+                        examType: document.getElementById('examType').value,
+                        date: document.getElementById('date').value,
+                        note: document.getElementById('note').value
+                    };
+                    
+                    // 收集科目分数
+                    this.config.subjects.forEach(subject => {
+                        const value = parseInt(document.getElementById(subject.key).value);
+                        if (!isNaN(value)) {
+                            record[subject.key] = value;
+                        }
+                    });
+                    
+                    if (mode === 'add') {
+                        // 新增记录
+                        this.data.push(record);
+                    } else {
+                        // 修改记录
+                        const index = parseInt(form.dataset.index);
+                        this.data[index] = record;
+                    }
+                    
+                    // 保存到localStorage
+                    this.saveToLocalStorage();
+                    
+                    // 更新显示
+                    this.renderTable();
+                    this.renderChart();
+                    
+                    // 关闭表单
+                    this.closeForm();
+                    
+                    // 显示保存成功提示
+                    this.showNotification('数据保存成功！');
+                    
+                } catch (error) {
+                    console.error('保存失败:', error);
+                    this.showNotification('保存失败: ' + error.message, true);
+                } finally {
+                    // 恢复按钮状态
+                    this.isSaving = false;
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '保存';
+                }
+            }
+            
+            deleteRecord() {
+                if (this.selectedRowIndex === null) return;
+                
+                if (confirm('确定要删除这条记录吗？')) {
+                    this.data.splice(this.selectedRowIndex, 1);
+                    
+                    // 更新显示
+                    this.renderTable();
+                    this.renderChart();
+                    
+                    // 保存到localStorage
+                    this.saveToLocalStorage();
+                    
+                    // 禁用按钮
+                    document.getElementById('editBtn').disabled = true;
+                    document.getElementById('deleteBtn').disabled = true;
+                    this.selectedRow = null;
+                    this.selectedRowIndex = null;
+                    
+                    // 显示删除成功提示
+                    this.showNotification('记录删除成功！');
+                }
+            }
+            
+            renderTable() {
+                const tbody = document.getElementById('tableBody');
+                const emptyMessage = document.getElementById('emptyDataMessage');
+                
+                tbody.innerHTML = '';
+                
+                if (this.data.length === 0) {
+                    // 显示空数据提示
+                    emptyMessage.style.display = 'block';
+                    return;
+                }
+                
+                emptyMessage.style.display = 'none';
+                
+                this.data.forEach((record, index) => {
+                    const row = document.createElement('tr');
+                    row.dataset.index = index;
+                    
+                    // 添加固定列
+                    row.innerHTML += `<td>${record.grade || ''}</td>`;
+                    row.innerHTML += `<td>${record.examType || ''}</td>`;
+                    row.innerHTML += `<td>${record.date || ''}</td>`;
+                    
+                    // 添加科目列
+                    this.config.subjects.forEach(subject => {
+                        const value = record[subject.key];
+                        row.innerHTML += `<td>${value !== undefined ? value : ''}</td>`;
+                    });
+                    
+                    // 添加备注列
+                    row.innerHTML += `<td>${record.note || ''}</td>`;
+                    
+                    tbody.appendChild(row);
+                });
+            }
+            
+            renderChart() {
+                const ctx = document.getElementById('scoresChart');
+                const emptyMessage = document.getElementById('emptyChartMessage');
+                
+                // 获取筛选条件
+                const subjectFilter = document.getElementById('subjectFilter').value;
+                const gradeFilter = document.getElementById('gradeFilter').value;
+                const examTypeFilter = document.getElementById('examTypeFilter').value;
+                
+                // 筛选数据
+                let filteredData = this.data;
+                
+                if (gradeFilter !== 'all') {
+                    filteredData = filteredData.filter(item => item.grade === gradeFilter);
+                }
+                
+                if (examTypeFilter !== 'all') {
+                    filteredData = filteredData.filter(item => item.examType === examTypeFilter);
+                }
+                
+                // 如果没有数据，显示空数据提示
+                if (filteredData.length === 0) {
+                    if (this.chart) {
+                        this.chart.destroy();
+                        this.chart = null;
+                    }
+                    emptyMessage.style.display = 'block';
+                    return;
+                }
+                
+                emptyMessage.style.display = 'none';
+                
+                // 按日期排序
+                filteredData.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                // 准备图表数据
+                const labels = filteredData.map(item => item.date);
+                const datasets = [];
+                
+                // 颜色方案
+                const colors = [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                    '#FF9F40', '#8AC926', '#1982C4', '#6A4C93', '#F15BB5'
+                ];
+                
+                // 获取要显示的科目
+                let subjects = [];
+                if (subjectFilter === 'all') {
+                    subjects = this.config.subjects.map(s => s.key);
+                } else {
+                    subjects = [subjectFilter];
+                }
+                
+                // 为每个科目创建数据集（只显示实际数据，不显示趋势线）
+                subjects.forEach((subjectKey, index) => {
+                    const subject = this.config.subjects.find(s => s.key === subjectKey);
+                    if (!subject) return;
+                    
+                    const data = filteredData.map(item => item[subjectKey] || 0);
+                    
+                    datasets.push({
+                        label: subject.name,  // 只显示科目名称，不添加"实际"后缀
+                        data: data,
+                        borderColor: colors[index % colors.length],
+                        backgroundColor: colors[index % colors.length] + '20',
+                        tension: 0.1,
+                        fill: false,
+                        pointRadius: 4
+                    });
+                });
+                
+                // 销毁旧图表
+                if (this.chart) {
+                    this.chart.destroy();
+                }
+                
+                // 创建新图表
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: '各科目成绩趋势分析',
+                                font: {
+                                    size: 16
+                                }
+                            },
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: '分数'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: '考试日期'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            saveToLocalStorage() {
+                // 保存到localStorage
+                localStorage.setItem('examScores', JSON.stringify(this.data));
+                
+                // 在控制台输出数据
+                console.log('数据已保存到localStorage:');
+                console.log(JSON.stringify(this.data, null, 2));
+            }
+            
+            downloadData() {
+                // 创建JSON数据
+                const dataStr = JSON.stringify(this.data, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                // 创建下载链接
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'data.json';
+                
+                // 触发下载
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // 释放URL
+                URL.revokeObjectURL(url);
+                
+                // 显示提示
+                this.showNotification('数据文件已下载，请替换服务器上的 data.json 文件');
+            }
+            
+            showNotification(message, isError = false) {
+                // 创建通知元素
+                const notification = document.createElement('div');
+                notification.className = 'save-notification' + (isError ? ' error' : '');
+                notification.textContent = message;
+                
+                // 添加到页面
+                document.body.appendChild(notification);
+                
+                // 3秒后自动移除
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 3000);
+            }
+            
+            showError(message) {
+                document.getElementById('loading').style.display = 'none';
+                
+                let errorHtml = `<h4>错误详情：</h4><p>${message}</p>`;
+                
+                // 如果是配置文件错误，提供模板
+                if (message.includes('config.json')) {
+                    errorHtml += `
+                        <h4>请创建 config.json 文件：</h4>
+                        <div class="file-template">
+{
+    "grades": ["高一", "高二", "高三"],
+    "examTypes": ["月考", "期中", "期末", "其他"],
+    "subjects": [
+        { "key": "chinese", "name": "语文" },
+        { "key": "math", "name": "数学" },
+        { "key": "english", "name": "英语" },
+        { "key": "physics", "name": "物理" },
+        { "key": "chemistry", "name": "化学" },
+        { "key": "history", "name": "历史" },
+        { "key": "politics", "name": "政治" },
+        { "key": "geography", "name": "地理" },
+        { "key": "biology", "name": "生物" },
+        { "key": "sports", "name": "体育" }
+    ]
+}
+                        </div>
+                    `;
+                }
+                
+                // 提示创建 data.json
+                errorHtml += `
+                    <h4>请创建 data.json 文件：</h4>
+                    <div class="file-template">[]
+</div>
+                    <p><strong>注意：</strong>请确保这两个文件与 index.html 在同一目录下，并且使用 HTTP 服务器访问（如 Python 的 SimpleHTTPServer 或 Node.js 的 http-server）。</p>
+                `;
+                
+                document.getElementById('errorMessage').innerHTML = errorHtml;
+                document.getElementById('errorModal').style.display = 'flex';
+            }
+            
+            closeError() {
+                document.getElementById('errorModal').style.display = 'none';
+            }
+        }
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            new DataManager();
+        });
+    </script>
+</body>
+</html>
