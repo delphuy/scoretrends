@@ -649,7 +649,7 @@
             
             async loadConfig() {
                 try {
-                    const response = await fetch('config.json');
+                    const response = await fetch('/api/config');
                     
                     // 检查响应状态
                     if (response.status === 404) {
@@ -702,7 +702,7 @@
             
             async loadData() {
                 try {
-                    const response = await fetch('data.json');
+                    const response = await fetch('/api/data');
                     
                     // 如果文件不存在，使用空数组
                     if (response.status === 404) {
@@ -1065,11 +1065,31 @@
                     
                     if (mode === 'add') {
                         // 新增记录
-                        this.data.push(record);
+                        const response = await fetch('/api/data', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(record)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('保存失败');
+                        }
+                        
+                        this.data = await response.json();
                     } else {
                         // 修改记录
-                        const index = parseInt(form.dataset.index);
-                        this.data[index] = record;
+                        const id = parseInt(form.dataset.index);
+                        const response = await fetch(`/api/data/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(record)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('保存失败');
+                        }
+                        
+                        this.data = await response.json();
                     }
                     
                     // 保存到localStorage
@@ -1100,7 +1120,16 @@
                 if (this.selectedRowIndex === null) return;
                 
                 if (confirm('确定要删除这条记录吗？')) {
-                    this.data.splice(this.selectedRowIndex, 1);
+                    const id = this.data[this.selectedRowIndex].id;
+                    const response = await fetch(`/api/data/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('删除失败');
+                    }
+                    
+                    this.data = await response.json();
                     
                     // 更新显示
                     this.renderTable();
@@ -1136,7 +1165,7 @@
                 
                 this.data.forEach((record, index) => {
                     const row = document.createElement('tr');
-                    row.dataset.index = index;
+                    row.dataset.index = record.id; // 使用数据库ID而不是数组索引
                     
                     // 添加固定列
                     row.innerHTML += `<td>${record.grade || ''}</td>`;
