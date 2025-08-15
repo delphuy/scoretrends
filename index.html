@@ -612,6 +612,8 @@
                 this.selectedRowIndex = null;
                 this.chart = null;
                 this.isSaving = false;
+                // 替换为您的Worker域名
+                this.workerApiUrl = 'https://exam-backend.您的用户名.workers.dev';
                 
                 // 初始化
                 this.init();
@@ -649,29 +651,19 @@
             
             async loadConfig() {
                 try {
-                    const response = await fetch('/api/config');
-                    
-                    // 检查响应状态
-                    if (response.status === 404) {
-                        throw new Error('配置文件 config.json 不存在');
-                    }
+                    const response = await fetch(`${this.workerApiUrl}/api/config`);
                     
                     if (!response.ok) {
-                        throw new Error(`配置文件加载失败: ${response.status} ${response.statusText}`);
+                        throw new Error('配置文件加载失败');
                     }
                     
                     const text = await response.text();
-                    
-                    // 检查是否是HTML错误页面
-                    if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<!DOCTYPE')) {
-                        throw new Error('配置文件 config.json 不存在或服务器返回了错误页面');
-                    }
                     
                     // 尝试解析JSON
                     try {
                         this.config = JSON.parse(text);
                     } catch (parseError) {
-                        throw new Error('配置文件 config.json 格式错误，不是有效的JSON格式');
+                        throw new Error('配置文件格式错误，不是有效的JSON格式');
                     }
                     
                     // 验证配置文件格式
@@ -696,39 +688,23 @@
                     
                 } catch (error) {
                     console.error('配置文件加载失败:', error);
-                    throw new Error(`配置文件错误: ${error.message}`);
+                    throw new Error('配置文件错误: ' + error.message);
                 }
             }
             
             async loadData() {
                 try {
-                    const response = await fetch('/api/data');
-                    
-                    // 如果文件不存在，使用空数组
-                    if (response.status === 404) {
-                        console.log('data.json 不存在，使用空数据');
-                        this.data = [];
-                        return;
-                    }
+                    const response = await fetch(`${this.workerApiUrl}/api/data`);
                     
                     if (!response.ok) {
-                        console.log(`data.json 加载失败: ${response.status} ${response.statusText}，使用空数据`);
-                        this.data = [];
-                        return;
+                        throw new Error('数据文件加载失败');
                     }
                     
                     const text = await response.text();
                     
-                    // 检查是否是HTML错误页面
-                    if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<!DOCTYPE')) {
-                        console.log('data.json 返回了HTML错误页面，使用空数据');
-                        this.data = [];
-                        return;
-                    }
-                    
                     // 如果文件为空，使用空数组
                     if (!text.trim()) {
-                        console.log('data.json 为空，使用空数据');
+                        console.log('数据文件为空，使用空数据');
                         this.data = [];
                         return;
                     }
@@ -739,12 +715,12 @@
                         
                         // 验证数据格式
                         if (!Array.isArray(data)) {
-                            throw new Error('data.json 格式错误，应该是数组格式');
+                            throw new Error('数据文件格式错误，应该是数组格式');
                         }
                         
                         this.data = data;
                     } catch (parseError) {
-                        console.log('data.json 格式错误，使用空数据');
+                        console.log('数据文件格式错误，使用空数据');
                         this.data = [];
                     }
                     
@@ -1065,7 +1041,7 @@
                     
                     if (mode === 'add') {
                         // 新增记录
-                        const response = await fetch('/api/data', {
+                        const response = await fetch(`${this.workerApiUrl}/api/data`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(record)
@@ -1078,8 +1054,8 @@
                         this.data = await response.json();
                     } else {
                         // 修改记录
-                        const id = parseInt(form.dataset.index);
-                        const response = await fetch(`/api/data/${id}`, {
+                        const id = this.data[parseInt(form.dataset.index)].id;
+                        const response = await fetch(`${this.workerApiUrl}/api/data/${id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(record)
@@ -1091,9 +1067,6 @@
                         
                         this.data = await response.json();
                     }
-                    
-                    // 保存到localStorage
-                    this.saveToLocalStorage();
                     
                     // 更新显示
                     this.renderTable();
@@ -1116,36 +1089,39 @@
                 }
             }
             
-            deleteRecord() {
+            async deleteRecord() {
                 if (this.selectedRowIndex === null) return;
                 
                 if (confirm('确定要删除这条记录吗？')) {
-                    const id = this.data[this.selectedRowIndex].id;
-                    const response = await fetch(`/api/data/${id}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error('删除失败');
+                    try {
+                        const id = this.data[this.selectedRowIndex].id;
+                        const response = await fetch(`${this.workerApiUrl}/api/data/${id}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('删除失败');
+                        }
+                        
+                        this.data = await response.json();
+                        
+                        // 更新显示
+                        this.renderTable();
+                        this.renderChart();
+                        
+                        // 禁用按钮
+                        document.getElementById('editBtn').disabled = true;
+                        document.getElementById('deleteBtn').disabled = true;
+                        this.selectedRow = null;
+                        this.selectedRowIndex = null;
+                        
+                        // 显示删除成功提示
+                        this.showNotification('记录删除成功！');
+                        
+                    } catch (error) {
+                        console.error('删除失败:', error);
+                        this.showNotification('删除失败: ' + error.message, true);
                     }
-                    
-                    this.data = await response.json();
-                    
-                    // 更新显示
-                    this.renderTable();
-                    this.renderChart();
-                    
-                    // 保存到localStorage
-                    this.saveToLocalStorage();
-                    
-                    // 禁用按钮
-                    document.getElementById('editBtn').disabled = true;
-                    document.getElementById('deleteBtn').disabled = true;
-                    this.selectedRow = null;
-                    this.selectedRowIndex = null;
-                    
-                    // 显示删除成功提示
-                    this.showNotification('记录删除成功！');
                 }
             }
             
@@ -1165,7 +1141,7 @@
                 
                 this.data.forEach((record, index) => {
                     const row = document.createElement('tr');
-                    row.dataset.index = record.id; // 使用数据库ID而不是数组索引
+                    row.dataset.index = index;
                     
                     // 添加固定列
                     row.innerHTML += `<td>${record.grade || ''}</td>`;
@@ -1307,24 +1283,10 @@
                 });
             }
             
-            saveToLocalStorage() {
-                // 保存到localStorage
-                localStorage.setItem('examScores', JSON.stringify(this.data));
-                
-                // 在控制台输出数据
-                console.log('数据已保存到localStorage:');
-                console.log(JSON.stringify(this.data, null, 2));
-            }
-            
             downloadData() {
-                // 创建JSON数据
-                const dataStr = JSON.stringify(this.data, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                
                 // 创建下载链接
-                const url = URL.createObjectURL(dataBlob);
                 const link = document.createElement('a');
-                link.href = url;
+                link.href = `${this.workerApiUrl}/data.json`;
                 link.download = 'data.json';
                 
                 // 触发下载
@@ -1332,11 +1294,8 @@
                 link.click();
                 document.body.removeChild(link);
                 
-                // 释放URL
-                URL.revokeObjectURL(url);
-                
                 // 显示提示
-                this.showNotification('数据文件已下载，请替换服务器上的 data.json 文件');
+                this.showNotification('数据文件已下载');
             }
             
             showNotification(message, isError = false) {
@@ -1361,37 +1320,12 @@
                 
                 let errorHtml = `<h4>错误详情：</h4><p>${message}</p>`;
                 
-                // 如果是配置文件错误，提供模板
-                if (message.includes('config.json')) {
-                    errorHtml += `
-                        <h4>请创建 config.json 文件：</h4>
-                        <div class="file-template">
-{
-    "grades": ["高一", "高二", "高三"],
-    "examTypes": ["月考", "期中", "期末", "其他"],
-    "subjects": [
-        { "key": "chinese", "name": "语文" },
-        { "key": "math", "name": "数学" },
-        { "key": "english", "name": "英语" },
-        { "key": "physics", "name": "物理" },
-        { "key": "chemistry", "name": "化学" },
-        { "key": "history", "name": "历史" },
-        { "key": "politics", "name": "政治" },
-        { "key": "geography", "name": "地理" },
-        { "key": "biology", "name": "生物" },
-        { "key": "sports", "name": "体育" }
-    ]
-}
-                        </div>
-                    `;
-                }
-                
                 // 提示创建 data.json
                 errorHtml += `
-                    <h4>请创建 data.json 文件：</h4>
+                    <h4>请确保数据库已正确配置</h4>
                     <div class="file-template">[]
 </div>
-                    <p><strong>注意：</strong>请确保这两个文件与 index.html 在同一目录下，并且使用 HTTP 服务器访问（如 Python 的 SimpleHTTPServer 或 Node.js 的 http-server）。</p>
+                    <p><strong>注意：</strong>请确保Worker已正确绑定D1数据库，并且数据库中已初始化配置数据。</p>
                 `;
                 
                 document.getElementById('errorMessage').innerHTML = errorHtml;
