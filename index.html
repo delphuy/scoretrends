@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>游舒闻考试成绩追踪</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" defer></script>
     <style>
         :root {
             --primary-color: #4285f4;
@@ -1246,6 +1246,11 @@
             }
             
             renderChart() {
+                // 检查Chart是否已加载
+                if (typeof Chart === 'undefined') {
+                    setTimeout(() => this.renderChart(), 100);
+                    return;
+                }
                 const ctx = document.getElementById('scoresChart');
                 const emptyMessage = document.getElementById('emptyChartMessage');
                 
@@ -1490,9 +1495,16 @@
             }
         }
         
-        // 初始化应用
+        // 初始化应用，确保Chart加载完成
         document.addEventListener('DOMContentLoaded', () => {
-            new DataManager();
+            const checkChartLoaded = () => {
+                if (typeof Chart !== 'undefined') {
+                    new DataManager();
+                } else {
+                    setTimeout(checkChartLoaded, 50);
+                }
+            };
+            checkChartLoaded();
         });
     </script>
 </body>
